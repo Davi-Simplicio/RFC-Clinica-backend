@@ -30,12 +30,17 @@ public class DadosRecepcao {
     private String observacoes;
 
     @Column(name = "atualizado_em", nullable = false)
-    @Builder.Default
-    private LocalDateTime atualizadoEm = LocalDateTime.now();
+    private LocalDateTime atualizadoEm;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paciente_id", nullable = false, unique = true)
     private Paciente paciente;
+
+    @PrePersist
+    @PreUpdate
+    protected void registrarAtualizacao() {
+        this.atualizadoEm = LocalDateTime.now();
+    }
 
     public boolean isAtendimentoSus() {
         return "SUS".equalsIgnoreCase(this.planoSaude);

@@ -81,8 +81,8 @@ Historicamente, clínicas filantrópicas e ambulatoriais enfrentam gargalos oper
 | Código | Categoria | Requisito Não Funcional | Especificação Técnica |
 | :--- | :--- | :--- | :--- |
 | **RNF01** | **Desempenho e Responsividade** | Tempo de resposta em consultas e filtros | As operações de listagem da agenda diária, filtragem por status e busca de pacientes devem responder em tempo inferior a **200 ms** no cliente e **500 ms** em chamadas de API REST (p95), utilizando índices compostos em `data_atendimento`, `horario`, `status` e `cpf`. |
-| **RNF02** | **Segurança e Controle de Acesso (RBAC)** | Autenticação segura e segregação por papéis | As senhas dos usuários (`tb_usuarios`) devem ser armazenadas exclusivamente sob hash criptográfico (`BCrypt`). O controle de acesso deve ser baseado em papéis (`RolePerfil`: `RECEPCIONISTA`, `MEDICA`, `ENFERMEIRA`) e em conformidade com a **LGPD (Lei nº 13.709/2018)** por tratar dados pessoais sensíveis de saúde. |
-| **RNF03** | **Banco de Dados e Persistência (JPA)** | Integridade relacional e mapeamento ORM | A camada de persistência deve utilizar **Java 21 + Spring Boot 3.3 + Spring Data JPA (Hibernate)**, compatível com **PostgreSQL 16** (produção) e **H2 Database** (desenvolvimento/testes), garantindo transações ACID (`@Transactional`), chaves estrangeiras explícitas e restrições de unicidade (`UNIQUE`) para CPF, e-mail de usuário e código de procedimento. |
+| **RNF02** | **Segurança e Controle de Acesso (RBAC)** | Autenticação segura e segregação por papéis | As senhas dos usuários (`tb_usuarios`) devem ser armazenadas exclusivamente sob hash criptográfico (`BCrypt`, via `spring-security-crypto`), sendo a verificação feita com `PasswordEncoder.matches()` (`Usuario.autenticar()`); tokens de recuperação de senha possuem prazo de expiração. O controle de acesso deve ser baseado em papéis (`RolePerfil`: `RECEPCIONISTA`, `MEDICA`, `ENFERMEIRA`) e em conformidade com a **LGPD (Lei nº 13.709/2018)** por tratar dados pessoais sensíveis de saúde. |
+| **RNF03** | **Banco de Dados e Persistência (JPA)** | Integridade relacional e mapeamento ORM | A camada de persistência deve utilizar **Java 21 + Spring Boot 3.3 + Spring Data JPA (Hibernate)**, compatível com **PostgreSQL 16** (perfil `prod`) e **H2 Database** (perfil `dev` e testes), com chaves estrangeiras explícitas e restrições de unicidade (`UNIQUE`) para CPF, e-mail de usuário, código de procedimento e protocolo de agendamento. A camada de serviço (Etapa 2) deverá garantir transações ACID com `@Transactional`. O histórico de agendamentos não é removido em cascata ao excluir uma paciente (guarda de prontuário). |
 | **RNF04** | **Padrões de Arquitetura REST** | Design de API RESTful padronizado | A comunicação entre o frontend (**Next.js 16 / React 19**) e o backend (**Spring Web**) deve seguir o padrão **RESTful** sobre HTTP/HTTPS com payloads em **JSON (UTF-8)**, uso semântico de verbos HTTP (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`), códigos de status padronizados (`200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, `422 Unprocessable Entity`) e validação via **Jakarta Bean Validation** (`@NotBlank`, `@NotNull`, `@Email`). |
 | **RNF05** | **Usabilidade e Acessibilidade Visual** | Interface clínica de alto contraste e baixo esforço cognitivo | A interface gráfica deve seguir fielmente o Design System da RFCC Jaraguá do Sul (Tailwind CSS v4), utilizando codificação cromática semântica para os status da agenda (Rosa/Magenta para *Marcado*, Âmbar para *Em Andamento*, Verde Esmeralda para *Atendido*, Cinza Ardósia para *Faltou*) e máscaras automáticas de entrada para CPF, CNS, CEP e Telefone. |
 | **RNF06** | **Interoperabilidade Externa** | Integração com serviços públicos e mensageria | O sistema deve integrar-se via HTTPS REST à API pública **ViaCEP** (`https://viacep.com.br/ws/{cep}/json/`) para consulta de logradouros e código municipal IBGE, e ao protocolo de deep-linking **WhatsApp Web/Mobile** (`https://wa.me/`). |
@@ -95,15 +95,20 @@ Historicamente, clínicas filantrópicas e ambulatoriais enfrentam gargalos oper
 
 O modelo de domínio do sistema **SaúdeFem (RFCC Jaraguá do Sul)** foi projetado contemplando **8 classes de entidade persistentes (`@Entity`)** e **4 enumerações de domínio**, cobrindo todas as cardinalidades exigidas:
 - **Relacionamentos `1:1` (`@OneToOne`):**
-  - `Paciente` `1` $\leftrightarrow$ `1` `Endereco`: Toda paciente possui um endereço residencial estruturado com CEP e código IBGE.
+  - `Paciente` `1` $\leftrightarrow$ `0..1` `Endereco`: Cada paciente possui no máximo um endereço residencial estruturado com CEP e código IBGE (pode ser preenchido após o cadastro inicial).
   - `Paciente` `1` $\leftrightarrow$ `0..1` `DadosRecepcao`: Cada paciente possui um registro de triagem da recepção (D.U.M., plano de saúde e observações).
   - `Paciente` `1` $\leftrightarrow$ `0..1` `Anamnese`: Cada paciente possui sua ficha de anamnese ginecológica/oncológica atualizada.
 - **Relacionamentos `1:N` / `N:1` (`@OneToMany` / `@ManyToOne`):**
-  - `Paciente` `1` $\leftrightarrow$ `1..*` `TelefoneContato`: Uma paciente pode cadastrar um ou vários telefones de contato (celular, fixo, recado, trabalho).
+  - `Paciente` `1` $\leftrightarrow$ `0..*` `TelefoneContato`: Uma paciente pode cadastrar nenhum, um ou vários telefones de contato (celular, fixo, recado, trabalho).
   - `Paciente` `1` $\leftrightarrow$ `0..*` `Agendamento`: Uma paciente pode ter múltiplos agendamentos ao longo do tempo na clínica.
   - `Usuario` `1` $\leftrightarrow$ `0..*` `Agendamento`: Uma profissional de saúde (Médica/Enfermeira) conduz diversos agendamentos na agenda diária.
 - **Relacionamento `N:M` (`@ManyToMany`):**
-  - `Agendamento` `0..*` $\leftrightarrow$ `1..*` `Procedimento`: Um agendamento clínico pode contemplar um ou mais procedimentos/exames (ex.: *Exame de Mama* + *Preventivo Citopatológico*), e um mesmo procedimento do catálogo da clínica está presente em inúmeros agendamentos (mapeado via tabela associativa `tb_agendamento_procedimentos`).
+  - `Agendamento` `0..*` $\leftrightarrow$ `1..*` `Procedimento`: Um agendamento clínico contempla obrigatoriamente um ou mais procedimentos/exames (`@NotEmpty`; ex.: *Exame de Mama* + *Preventivo Citopatológico*), e um mesmo procedimento do catálogo da clínica está presente em inúmeros agendamentos (mapeado via tabela associativa `tb_agendamento_procedimentos`).
+- **Composição (losango preenchido):** `Endereco`, `TelefoneContato`, `DadosRecepcao` e `Anamnese` pertencem ao ciclo de vida da `Paciente` (`cascade = ALL` + `orphanRemoval = true`).
+
+![Diagrama de Classes UML](diagrama_classes.png)
+
+*Fonte equivalente em Mermaid:*
 
 ```mermaid
 classDiagram
@@ -128,7 +133,6 @@ classDiagram
         <<enumeration>>
         MANHA
         TARDE
-        NOITE
     }
 
     class TipoTelefone {
@@ -144,12 +148,15 @@ classDiagram
         -String nomeCompleto
         -String email
         -String senhaHash
+        -String tokenRecuperacaoSenha
+        -LocalDateTime tokenRecuperacaoExpiraEm
         -RolePerfil perfil
         -String registroProfissional
         -String especialidade
         -Boolean ativo
         -LocalDateTime criadoEm
-        +autenticar(String senhaInformadaHash) boolean
+        +autenticar(String senhaInformada, PasswordEncoder encoder) boolean
+        +tokenRecuperacaoValido(String token) boolean
         +possuiPermissaoClinica() boolean
     }
 
@@ -190,7 +197,7 @@ classDiagram
         -Long id
         -String numero
         -TipoTelefone tipo
-        -Boolean hasWhatsapp
+        -Boolean possuiWhatsapp
         +obterNumeroSomenteDigitos() String
     }
 
@@ -205,15 +212,15 @@ classDiagram
 
     class Anamnese {
         -Long id
-        -String primeiraRelacao
-        -String primeiraMenstruacao
-        -String anoUltimaMenstruacao
-        -String anoUltimoParto
+        -Integer idadePrimeiraRelacao
+        -Integer idadePrimeiraMenstruacao
+        -Integer anoUltimaMenstruacao
+        -Integer anoUltimoParto
         -Integer partosNormais
         -Integer partosCesaria
-        -String curetagemAno
-        -String cauterizacaoAno
-        -Boolean dejaAborto
+        -Integer anoCuretagem
+        -Integer anoCauterizacao
+        -Boolean teveAborto
         -Boolean tomaAnticoncepcional
         -String cancerFamilia
         -String mamas
@@ -248,10 +255,10 @@ classDiagram
         -Boolean ativo
     }
 
-    Paciente "1" -- "1" Endereco : reside em (1:1)
-    Paciente "1" -- "1..*" TelefoneContato : possui (1:N)
-    Paciente "1" -- "0..1" DadosRecepcao : triagem recepcao (1:1)
-    Paciente "1" -- "0..1" Anamnese : prontuario clinico (1:1)
+    Paciente "1" *-- "0..1" Endereco : reside em (1:1)
+    Paciente "1" *-- "0..*" TelefoneContato : possui (1:N)
+    Paciente "1" *-- "0..1" DadosRecepcao : triagem recepcao (1:1)
+    Paciente "1" *-- "0..1" Anamnese : prontuario clinico (1:1)
     Paciente "1" -- "0..*" Agendamento : agenda (1:N)
     Usuario "1" -- "0..*" Agendamento : atende / responsavel (1:N)
     Agendamento "0..*" -- "1..*" Procedimento : inclui exames/procedimentos (N:M)
@@ -263,14 +270,15 @@ classDiagram
 ```
 
 > **Arquivos de Modelagem no Repositório:**
-> - Mermaid UML: [`docs/diagrama_classes.mmd`](../docs/diagrama_classes.mmd)
-> - PlantUML: [`docs/diagrama_classes.puml`](../docs/diagrama_classes.puml)
+> - Mermaid UML: [`docs/diagrama_classes.mmd`](diagrama_classes.mmd)
+> - PlantUML: [`docs/diagrama_classes.puml`](diagrama_classes.puml)
+> - Imagem renderizada: [`docs/diagrama_classes.png`](diagrama_classes.png)
 
 ---
 
 ### 3.2 Mapeamento de Entidades JPA e Dicionário de Dados
 
-A camada de persistência foi implementada em **Spring Boot 3 + Spring Data JPA** no diretório [`backend/`](../backend), superando o requisito mínimo de 5 entidades ao disponibilizar **8 entidades JPA (`@Entity`)** e **8 interfaces `JpaRepository`**.
+A camada de persistência foi implementada em **Spring Boot 3 + Spring Data JPA** no diretório [`src/main/java/br/org/rfcc/saudefem`](../src/main/java/br/org/rfcc/saudefem) (entidades em `domain/entity`, repositórios em `repository`), superando o requisito mínimo de 5 entidades ao disponibilizar **8 entidades JPA (`@Entity`)** e **8 interfaces `JpaRepository`**. O mapeamento é verificado pelo teste de integração [`PersistenciaJpaTest`](../src/test/java/br/org/rfcc/saudefem/repository/PersistenciaJpaTest.java) (`@DataJpaTest` sobre H2), executado com `./mvnw verify`.
 
 #### Visão Geral das Entidades e Repositórios Implementados
 
@@ -297,7 +305,9 @@ Armazena as credenciais e perfis das profissionais da clínica (Recepcionistas, 
 | `id` | `id` | `BIGINT` | `Long` | `PK`, `AUTO_INCREMENT` | Identificador único do usuário/profissional. |
 | `nome_completo` | `nomeCompleto` | `VARCHAR(120)` | `String` | `NOT NULL` | Nome completo da profissional (ex: Dra. Ana Beatriz). |
 | `email` | `email` | `VARCHAR(150)` | `String` | `NOT NULL`, `UNIQUE` | E-mail institucional de login (`@rfcc.org.br`). |
-| `senha_hash` | `senhaHash` | `VARCHAR(255)` | `String` | `NOT NULL` | Hash criptográfico da senha de acesso. |
+| `senha_hash` | `senhaHash` | `VARCHAR(255)` | `String` | `NOT NULL` | Hash BCrypt da senha de acesso. |
+| `token_recuperacao_senha` | `tokenRecuperacaoSenha` | `VARCHAR(100)` | `String` | `NULL`, `UNIQUE` | Token enviado por e-mail no fluxo de recuperação de senha (RF01). |
+| `token_recuperacao_expira_em` | `tokenRecuperacaoExpiraEm` | `TIMESTAMP` | `LocalDateTime` | `NULL` | Data/hora de expiração do token de recuperação. |
 | `perfil` | `perfil` | `VARCHAR(30)` | `RolePerfil` | `NOT NULL` | Papel de acesso: `RECEPCIONISTA`, `MEDICA` ou `ENFERMEIRA`. |
 | `registro_profissional` | `registroProfissional` | `VARCHAR(40)` | `String` | `NULL` | Registro no conselho de classe (CRM/SC ou COREN/SC). |
 | `especialidade` | `especialidade` | `VARCHAR(80)` | `String` | `NULL` | Especialidade clínica (ex: Ginecologista / Mastologista). |
@@ -347,7 +357,7 @@ Armazena os múltiplos telefones de contato da paciente (`1:N`).
 | `paciente_id` | `paciente` | `BIGINT` | `Paciente` | `FK`, `NOT NULL` | Chave estrangeira `N:1` referenciando `tb_pacientes(id)`. |
 | `numero` | `numero` | `VARCHAR(25)` | `String` | `NOT NULL` | Número formatado com DDD (ex: `(47) 9 9123-4567`). |
 | `tipo` | `tipo` | `VARCHAR(20)` | `TipoTelefone` | `NOT NULL` | Tipo do contato: `CELULAR`, `FIXO`, `RECADO` ou `TRABALHO`. |
-| `has_whatsapp` | `hasWhatsapp` | `BOOLEAN` | `Boolean` | `NOT NULL`, `DEFAULT TRUE` | Indica se o número recebe notificações via WhatsApp. |
+| `possui_whatsapp` | `possuiWhatsapp` | `BOOLEAN` | `Boolean` | `NOT NULL`, `DEFAULT TRUE` | Indica se o número recebe notificações via WhatsApp. |
 
 ##### 5. Tabela `tb_dados_recepcao` (Entidade `DadosRecepcao`)
 Armazena as informações de triagem administrativa e recepção da paciente (`1:1`).
@@ -359,7 +369,7 @@ Armazena as informações de triagem administrativa e recepção da paciente (`1
 | `dum` | `dum` | `DATE` | `LocalDate` | `NULL` | Data da Última Menstruação (D.U.M.). |
 | `plano_saude` | `planoSaude` | `VARCHAR(60)` | `String` | `NOT NULL` | Convênio médico (`Particular`, `SUS`, `Unimed`, `Bradesco Saúde`). |
 | `observacoes` | `observacoes` | `TEXT` | `String` | `NULL` | Observações livres de recepção/encaminhamento. |
-| `atualizado_em` | `atualizadoEm` | `TIMESTAMP` | `LocalDateTime` | `NOT NULL` | Data e hora da última atualização na recepção. |
+| `atualizado_em` | `atualizadoEm` | `TIMESTAMP` | `LocalDateTime` | `NOT NULL` | Data e hora da última atualização na recepção (preenchida via `@PrePersist`/`@PreUpdate`). |
 
 ##### 6. Tabela `tb_anamneses` (Entidade `Anamnese`)
 Armazena o histórico ginecológico, obstétrico e oncológico da paciente (`1:1`).
@@ -368,20 +378,20 @@ Armazena o histórico ginecológico, obstétrico e oncológico da paciente (`1:1
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id` | `id` | `BIGINT` | `Long` | `PK`, `AUTO_INCREMENT` | Identificador único da anamnese. |
 | `paciente_id` | `paciente` | `BIGINT` | `Paciente` | `FK`, `NOT NULL`, `UNIQUE` | Chave estrangeira `1:1` referenciando `tb_pacientes(id)`. |
-| `primeira_relacao` | `primeiraRelacao` | `VARCHAR(20)` | `String` | `NULL` | Idade da primeira relação sexual (coitarca). |
-| `primeira_menstruacao` | `primeiraMenstruacao` | `VARCHAR(20)` | `String` | `NULL` | Idade da primeira menstruação (menarca). |
-| `ano_ultima_menstruacao` | `anoUltimaMenstruacao` | `VARCHAR(10)` | `String` | `NULL` | Ano da última menstruação / menopausa. |
-| `ano_ultimo_parto` | `anoUltimoParto` | `VARCHAR(10)` | `String` | `NULL` | Ano em que ocorreu o último parto. |
+| `idade_primeira_relacao` | `idadePrimeiraRelacao` | `INTEGER` | `Integer` | `NULL`, `0–120` | Idade (anos) da primeira relação sexual (coitarca). |
+| `idade_primeira_menstruacao` | `idadePrimeiraMenstruacao` | `INTEGER` | `Integer` | `NULL`, `0–120` | Idade (anos) da primeira menstruação (menarca). |
+| `ano_ultima_menstruacao` | `anoUltimaMenstruacao` | `INTEGER` | `Integer` | `NULL` | Ano da última menstruação / menopausa. |
+| `ano_ultimo_parto` | `anoUltimoParto` | `INTEGER` | `Integer` | `NULL` | Ano em que ocorreu o último parto. |
 | `partos_normais` | `partosNormais` | `INTEGER` | `Integer` | `NOT NULL`, `DEFAULT 0` | Quantidade de partos vaginais/normais. |
 | `partos_cesaria` | `partosCesaria` | `INTEGER` | `Integer` | `NOT NULL`, `DEFAULT 0` | Quantidade de partos cesáreos. |
-| `curetagem_ano` | `curetagemAno` | `VARCHAR(10)` | `String` | `NULL` | Ano de realização de curetagem uterina (se houver). |
-| `cauterizacao_ano` | `cauterizacaoAno` | `VARCHAR(10)` | `String` | `NULL` | Ano de realização de cauterização de colo uterino (se houver). |
-| `deja_aborto` | `dejaAborto` | `BOOLEAN` | `Boolean` | `NOT NULL`, `DEFAULT FALSE` | Indica histórico de abortamento prévio. |
+| `ano_curetagem` | `anoCuretagem` | `INTEGER` | `Integer` | `NULL` | Ano de realização de curetagem uterina (se houver). |
+| `ano_cauterizacao` | `anoCauterizacao` | `INTEGER` | `Integer` | `NULL` | Ano de realização de cauterização de colo uterino (se houver). |
+| `teve_aborto` | `teveAborto` | `BOOLEAN` | `Boolean` | `NOT NULL`, `DEFAULT FALSE` | Indica histórico de abortamento prévio. |
 | `toma_anticoncepcional` | `tomaAnticoncepcional` | `BOOLEAN` | `Boolean` | `NOT NULL`, `DEFAULT FALSE` | Indica uso atual de método anticoncepcional hormonal. |
 | `cancer_familia` | `cancerFamilia` | `TEXT` | `String` | `NULL` | Descrição detalhada de antecedentes familiares oncológicos. |
 | `mamas` | `mamas` | `TEXT` | `String` | `NULL` | Achados do exame clínico das mamas (palpação, simetria, nódulos). |
 | `sintomas` | `sintomas` | `TEXT` | `String` | `NULL` | Queixa principal, sintomas relatados e motivo da consulta. |
-| `data_atualizacao` | `dataAtualizacao` | `TIMESTAMP` | `LocalDateTime` | `NOT NULL` | Data/hora da última evolução clínica. |
+| `data_atualizacao` | `dataAtualizacao` | `TIMESTAMP` | `LocalDateTime` | `NOT NULL` | Data/hora da última evolução clínica (preenchida via `@PrePersist`/`@PreUpdate`). |
 
 ##### 7. Tabela `tb_procedimentos` (Entidade `Procedimento`)
 Catálogo padronizado de exames e procedimentos clínicos oferecidos pela RFCC.
@@ -401,12 +411,12 @@ Registra os agendamentos e encaixes da agenda diária e seu vínculo `N:M` com o
 | Coluna | Atributo Java | Tipo SQL | Tipo Java | Restrições | Descrição |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id` | `id` | `BIGINT` | `Long` | `PK`, `AUTO_INCREMENT` | Identificador único do agendamento. |
-| `protocolo` | `protocolo` | `VARCHAR(30)` | `String` | `NOT NULL`, `INDEX` | Código de protocolo gerado (ex: `PROT-2026-0847`). |
+| `protocolo` | `protocolo` | `VARCHAR(30)` | `String` | `NOT NULL`, `UNIQUE` | Código de protocolo único gerado (ex: `PROT-2026-0847`). |
 | `paciente_id` | `paciente` | `BIGINT` | `Paciente` | `FK`, `NOT NULL` | Chave estrangeira `N:1` para `tb_pacientes(id)`. |
 | `profissional_id` | `profissionalResponsavel` | `BIGINT` | `Usuario` | `FK`, `NOT NULL` | Chave estrangeira `N:1` para `tb_usuarios(id)` (Médica responsável). |
 | `data_atendimento` | `dataAtendimento` | `DATE` | `LocalDate` | `NOT NULL`, `INDEX` | Data agendada para o atendimento. |
 | `horario` | `horario` | `TIME` | `LocalTime` | `NOT NULL`, `INDEX` | Horário do atendimento (ex: `07:40`, `13:00`). |
-| `periodo` | `periodo` | `VARCHAR(15)` | `PeriodoTurno` | `NOT NULL` | Turno da agenda: `MANHA`, `TARDE` ou `NOITE`. |
+| `periodo` | `periodo` | `VARCHAR(15)` | `PeriodoTurno` | `NOT NULL` | Turno da agenda: `MANHA` ou `TARDE`. |
 | `duracao_minutos` | `duracaoMinutos` | `INTEGER` | `Integer` | `NOT NULL`, `DEFAULT 20` | Duração prevista em minutos (`20`, `30`, `40`, `60`). |
 | `status` | `status` | `VARCHAR(20)` | `StatusAgendamento` | `NOT NULL`, `INDEX` | Estado atual: `MARCADO`, `EM_ANDAMENTO`, `ATENDIDO` ou `FALTOU`. |
 | `encaixe` | `encaixe` | `BOOLEAN` | `Boolean` | `NOT NULL`, `DEFAULT FALSE` | Indica se foi inserido via modal de **+ Encaixe**. |

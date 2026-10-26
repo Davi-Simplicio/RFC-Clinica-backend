@@ -1,4 +1,5 @@
 @startuml SaudeFem_RFCC_ClassDiagram
+!pragma layout smetana
 skinparam classAttributeIconSize 0
 skinparam monochrome false
 skinparam shadowing false
@@ -21,7 +22,6 @@ enum StatusAgendamento {
 enum PeriodoTurno {
   MANHA
   TARDE
-  NOITE
 }
 
 enum TipoTelefone {
@@ -36,13 +36,16 @@ class Usuario {
   - nomeCompleto : String
   - email : String
   - senhaHash : String
+  - tokenRecuperacaoSenha : String
+  - tokenRecuperacaoExpiraEm : LocalDateTime
   - perfil : RolePerfil
   - registroProfissional : String
   - especialidade : String
   - ativo : Boolean
   - criadoEm : LocalDateTime
   --
-  + autenticar(senhaInformadaHash : String) : boolean
+  + autenticar(senhaInformada : String, encoder : PasswordEncoder) : boolean
+  + tokenRecuperacaoValido(token : String) : boolean
   + possuiPermissaoClinica() : boolean
 }
 
@@ -85,7 +88,7 @@ class TelefoneContato {
   - id : Long
   - numero : String
   - tipo : TipoTelefone
-  - hasWhatsapp : Boolean
+  - possuiWhatsapp : Boolean
   --
   + obterNumeroSomenteDigitos() : String
 }
@@ -102,15 +105,15 @@ class DadosRecepcao {
 
 class Anamnese {
   - id : Long
-  - primeiraRelacao : String
-  - primeiraMenstruacao : String
-  - anoUltimaMenstruacao : String
-  - anoUltimoParto : String
+  - idadePrimeiraRelacao : Integer
+  - idadePrimeiraMenstruacao : Integer
+  - anoUltimaMenstruacao : Integer
+  - anoUltimoParto : Integer
   - partosNormais : Integer
   - partosCesaria : Integer
-  - curetagemAno : String
-  - cauterizacaoAno : String
-  - dejaAborto : Boolean
+  - anoCuretagem : Integer
+  - anoCauterizacao : Integer
+  - teveAborto : Boolean
   - tomaAnticoncepcional : Boolean
   - cancerFamilia : String
   - mamas : String
@@ -147,12 +150,17 @@ class Procedimento {
   - ativo : Boolean
 }
 
-Paciente "1" *-- "1" Endereco : reside em (1:1)
-Paciente "1" *-- "1..*" TelefoneContato : possui (1:N)
+Paciente "1" *-- "0..1" Endereco : reside em (1:1)
+Paciente "1" *-- "0..*" TelefoneContato : possui (1:N)
 Paciente "1" *-- "0..1" DadosRecepcao : triagem (1:1)
 Paciente "1" *-- "0..1" Anamnese : prontuário (1:1)
 Paciente "1" -- "0..*" Agendamento : realiza (1:N)
 Usuario "1" -- "0..*" Agendamento : conduz (1:N)
 Agendamento "0..*" -- "1..*" Procedimento : contempla (N:M)
+
+Usuario ..> RolePerfil : usa
+TelefoneContato ..> TipoTelefone : usa
+Agendamento ..> StatusAgendamento : usa
+Agendamento ..> PeriodoTurno : usa
 
 @enduml

@@ -12,5 +12,5 @@ public interface TelefoneContatoRepository extends JpaRepository<TelefoneContato
 
     List<TelefoneContato> findByPacienteId(Long pacienteId);
 
-    Optional<TelefoneContato> findFirstByPacienteIdAndHasWhatsappTrue(Long pacienteId);
+    Optional<TelefoneContato> findFirstByPacienteIdAndPossuiWhatsappTrue(Long pacienteId);
 }

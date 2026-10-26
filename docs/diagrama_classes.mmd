@@ -20,7 +20,6 @@ classDiagram
         <<enumeration>>
         MANHA
         TARDE
-        NOITE
     }
 
     class TipoTelefone {
@@ -36,12 +35,15 @@ classDiagram
         -String nomeCompleto
         -String email
         -String senhaHash
+        -String tokenRecuperacaoSenha
+        -LocalDateTime tokenRecuperacaoExpiraEm
         -RolePerfil perfil
         -String registroProfissional
         -String especialidade
         -Boolean ativo
         -LocalDateTime criadoEm
-        +autenticar(String senhaInformadaHash) boolean
+        +autenticar(String senhaInformada, PasswordEncoder encoder) boolean
+        +tokenRecuperacaoValido(String token) boolean
         +possuiPermissaoClinica() boolean
     }
 
@@ -82,7 +84,7 @@ classDiagram
         -Long id
         -String numero
         -TipoTelefone tipo
-        -Boolean hasWhatsapp
+        -Boolean possuiWhatsapp
         +obterNumeroSomenteDigitos() String
     }
 
@@ -97,15 +99,15 @@ classDiagram
 
     class Anamnese {
         -Long id
-        -String primeiraRelacao
-        -String primeiraMenstruacao
-        -String anoUltimaMenstruacao
-        -String anoUltimoParto
+        -Integer idadePrimeiraRelacao
+        -Integer idadePrimeiraMenstruacao
+        -Integer anoUltimaMenstruacao
+        -Integer anoUltimoParto
         -Integer partosNormais
         -Integer partosCesaria
-        -String curetagemAno
-        -String cauterizacaoAno
-        -Boolean dejaAborto
+        -Integer anoCuretagem
+        -Integer anoCauterizacao
+        -Boolean teveAborto
         -Boolean tomaAnticoncepcional
         -String cancerFamilia
         -String mamas
@@ -140,10 +142,10 @@ classDiagram
         -Boolean ativo
     }
 
-    Paciente "1" -- "1" Endereco : reside em (1:1)
-    Paciente "1" -- "1..*" TelefoneContato : possui (1:N)
-    Paciente "1" -- "0..1" DadosRecepcao : triagem recepcao (1:1)
-    Paciente "1" -- "0..1" Anamnese : prontuario clinico (1:1)
+    Paciente "1" *-- "0..1" Endereco : reside em (1:1)
+    Paciente "1" *-- "0..*" TelefoneContato : possui (1:N)
+    Paciente "1" *-- "0..1" DadosRecepcao : triagem recepcao (1:1)
+    Paciente "1" *-- "0..1" Anamnese : prontuario clinico (1:1)
     Paciente "1" -- "0..*" Agendamento : agenda (1:N)
     Usuario "1" -- "0..*" Agendamento : atende / responsavel (1:N)
     Agendamento "0..*" -- "1..*" Procedimento : inclui exames/procedimentos (N:M)

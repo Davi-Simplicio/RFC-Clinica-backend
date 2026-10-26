@@ -4,6 +4,7 @@ import br.org.rfcc.saudefem.domain.enums.PeriodoTurno;
 import br.org.rfcc.saudefem.domain.enums.StatusAgendamento;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -19,7 +20,6 @@ import java.util.stream.Collectors;
 @Table(
     name = "tb_agendamentos",
     indexes = {
-        @Index(name = "idx_agendamento_protocolo", columnList = "protocolo"),
         @Index(name = "idx_agendamento_data_horario", columnList = "data_atendimento, horario"),
         @Index(name = "idx_agendamento_status", columnList = "status")
     }
@@ -36,7 +36,7 @@ public class Agendamento {
     private Long id;
 
     @NotBlank
-    @Column(name = "protocolo", nullable = false, length = 30)
+    @Column(name = "protocolo", nullable = false, unique = true, length = 30)
     private String protocolo; // Ex: PROT-2026-0847
 
     @NotNull
@@ -85,7 +85,8 @@ public class Agendamento {
     @JoinColumn(name = "profissional_id", nullable = false)
     private Usuario profissionalResponsavel;
 
-    // Relacionamento N:M com Procedimento
+    // Relacionamento N:M com Procedimento (todo agendamento contempla ao menos 1 procedimento)
+    @NotEmpty
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "tb_agendamento_procedimentos",

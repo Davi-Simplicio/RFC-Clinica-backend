@@ -2,8 +2,7 @@ package br.org.rfcc.saudefem.domain.enums;
 
 public enum PeriodoTurno {
     MANHA("MANHÃ"),
-    TARDE("TARDE"),
-    NOITE("NOITE");
+    TARDE("TARDE");
 
     private final String rotulo;
 

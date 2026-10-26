@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,7 +36,13 @@ public class Usuario {
 
     @NotBlank
     @Column(name = "senha_hash", nullable = false, length = 255)
-    private String senhaHash;
+    private String senhaHash; // Hash BCrypt
+
+    @Column(name = "token_recuperacao_senha", unique = true, length = 100)
+    private String tokenRecuperacaoSenha;
+
+    @Column(name = "token_recuperacao_expira_em")
+    private LocalDateTime tokenRecuperacaoExpiraEm;
 
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -60,8 +67,17 @@ public class Usuario {
     @Builder.Default
     private List<Agendamento> agendamentos = new ArrayList<>();
 
-    public boolean autenticar(String senhaInformadaHash) {
-        return Boolean.TRUE.equals(this.ativo) && this.senhaHash.equals(senhaInformadaHash);
+    public boolean autenticar(String senhaInformada, PasswordEncoder encoder) {
+        return Boolean.TRUE.equals(this.ativo)
+                && senhaInformada != null
+                && encoder.matches(senhaInformada, this.senhaHash);
+    }
+
+    public boolean tokenRecuperacaoValido(String token) {
+        return tokenRecuperacaoSenha != null
+                && tokenRecuperacaoSenha.equals(token)
+                && tokenRecuperacaoExpiraEm != null
+                && LocalDateTime.now().isBefore(tokenRecuperacaoExpiraEm);
     }
 
     public boolean possuiPermissaoClinica() {

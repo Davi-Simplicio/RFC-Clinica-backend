@@ -29,9 +29,9 @@ public class TelefoneContato {
     @Builder.Default
     private TipoTelefone tipo = TipoTelefone.CELULAR;
 
-    @Column(name = "has_whatsapp", nullable = false)
+    @Column(name = "possui_whatsapp", nullable = false)
     @Builder.Default
-    private Boolean hasWhatsapp = true;
+    private Boolean possuiWhatsapp = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paciente_id", nullable = false)

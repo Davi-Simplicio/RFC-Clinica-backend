@@ -16,4 +16,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     List<Usuario> findByPerfilAndAtivoTrue(RolePerfil perfil);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    Optional<Usuario> findByTokenRecuperacaoSenha(String token);
 }

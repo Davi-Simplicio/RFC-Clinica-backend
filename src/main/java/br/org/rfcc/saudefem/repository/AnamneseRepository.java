@@ -14,5 +14,5 @@ public interface AnamneseRepository extends JpaRepository<Anamnese, Long> {
 
     List<Anamnese> findByTomaAnticoncepcionalTrue();
 
-    List<Anamnese> findByDejaAbortoTrue();
+    List<Anamnese> findByTeveAbortoTrue();
 }

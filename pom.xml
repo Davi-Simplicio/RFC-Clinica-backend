@@ -40,6 +40,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Hash de senhas (BCrypt) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- PostgreSQL Driver (Producao) -->
         <dependency>
             <groupId>org.postgresql</groupId>

@@ -15,7 +15,6 @@ import java.util.List;
 @Table(
     name = "tb_pacientes",
     indexes = {
-        @Index(name = "idx_paciente_cpf", columnList = "cpf", unique = true),
         @Index(name = "idx_paciente_cns", columnList = "cns"),
         @Index(name = "idx_paciente_nome", columnList = "nome_completo")
     }
@@ -86,8 +85,8 @@ public class Paciente {
     @OneToOne(mappedBy = "paciente", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Anamnese anamnese;
 
-    // Relacionamento 1:N com Agendamento
-    @OneToMany(mappedBy = "paciente", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // Relacionamento 1:N com Agendamento (sem REMOVE: o histórico de atendimentos é preservado)
+    @OneToMany(mappedBy = "paciente", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     @Builder.Default
     private List<Agendamento> agendamentos = new ArrayList<>();
 
