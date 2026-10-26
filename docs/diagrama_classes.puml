@@ -1,0 +1,158 @@
+@startuml SaudeFem_RFCC_ClassDiagram
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam shadowing false
+
+title Diagrama de Classes UML — SaúdeFem (Sistema Clínico RFCC Jaraguá do Sul)
+
+enum RolePerfil {
+  RECEPCIONISTA
+  MEDICA
+  ENFERMEIRA
+}
+
+enum StatusAgendamento {
+  MARCADO
+  EM_ANDAMENTO
+  ATENDIDO
+  FALTOU
+}
+
+enum PeriodoTurno {
+  MANHA
+  TARDE
+  NOITE
+}
+
+enum TipoTelefone {
+  CELULAR
+  FIXO
+  RECADO
+  TRABALHO
+}
+
+class Usuario {
+  - id : Long
+  - nomeCompleto : String
+  - email : String
+  - senhaHash : String
+  - perfil : RolePerfil
+  - registroProfissional : String
+  - especialidade : String
+  - ativo : Boolean
+  - criadoEm : LocalDateTime
+  --
+  + autenticar(senhaInformadaHash : String) : boolean
+  + possuiPermissaoClinica() : boolean
+}
+
+class Paciente {
+  - id : Long
+  - nomeCompleto : String
+  - tratamento : String
+  - genero : String
+  - dataNascimento : LocalDate
+  - estadoCivil : String
+  - cutis : String
+  - naturalidade : String
+  - escolaridade : String
+  - cpf : String
+  - cns : String
+  - dataCadastro : LocalDateTime
+  --
+  + calcularIdade() : int
+  + adicionarTelefone(telefone : TelefoneContato) : void
+  + definirEndereco(novoEndereco : Endereco) : void
+  + definirDadosRecepcao(recepcao : DadosRecepcao) : void
+  + definirAnamnese(novaAnamnese : Anamnese) : void
+}
+
+class Endereco {
+  - id : Long
+  - cep : String
+  - logradouro : String
+  - numero : String
+  - complemento : String
+  - bairro : String
+  - cidade : String
+  - estado : String
+  - codigoIbge : String
+  --
+  + formatarEnderecoCompleto() : String
+}
+
+class TelefoneContato {
+  - id : Long
+  - numero : String
+  - tipo : TipoTelefone
+  - hasWhatsapp : Boolean
+  --
+  + obterNumeroSomenteDigitos() : String
+}
+
+class DadosRecepcao {
+  - id : Long
+  - dum : LocalDate
+  - planoSaude : String
+  - observacoes : String
+  - atualizadoEm : LocalDateTime
+  --
+  + isAtendimentoSus() : boolean
+}
+
+class Anamnese {
+  - id : Long
+  - primeiraRelacao : String
+  - primeiraMenstruacao : String
+  - anoUltimaMenstruacao : String
+  - anoUltimoParto : String
+  - partosNormais : Integer
+  - partosCesaria : Integer
+  - curetagemAno : String
+  - cauterizacaoAno : String
+  - dejaAborto : Boolean
+  - tomaAnticoncepcional : Boolean
+  - cancerFamilia : String
+  - mamas : String
+  - sintomas : String
+  - dataAtualizacao : LocalDateTime
+  --
+  + calcularTotalPartos() : int
+  + possuiHistoricoOncologicoFamiliar() : boolean
+}
+
+class Agendamento {
+  - id : Long
+  - protocolo : String
+  - dataAtendimento : LocalDate
+  - horario : LocalTime
+  - periodo : PeriodoTurno
+  - duracaoMinutos : Integer
+  - status : StatusAgendamento
+  - encaixe : Boolean
+  - notificadoWhatsapp : Boolean
+  - criadoEm : LocalDateTime
+  --
+  + adicionarProcedimento(proc : Procedimento) : void
+  + atualizarStatus(novoStatus : StatusAgendamento) : void
+  + gerarMensagemConfirmacaoWhatsApp() : String
+}
+
+class Procedimento {
+  - id : Long
+  - codigo : String
+  - nome : String
+  - descricao : String
+  - duracaoPadraoMinutos : Integer
+  - ativo : Boolean
+}
+
+Paciente "1" *-- "1" Endereco : reside em (1:1)
+Paciente "1" *-- "1..*" TelefoneContato : possui (1:N)
+Paciente "1" *-- "0..1" DadosRecepcao : triagem (1:1)
+Paciente "1" *-- "0..1" Anamnese : prontuário (1:1)
+Paciente "1" -- "0..*" Agendamento : realiza (1:N)
+Usuario "1" -- "0..*" Agendamento : conduz (1:N)
+Agendamento "0..*" -- "1..*" Procedimento : contempla (N:M)
+
+@enduml

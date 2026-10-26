@@ -1,0 +1,154 @@
+classDiagram
+    direction TB
+
+    class RolePerfil {
+        <<enumeration>>
+        RECEPCIONISTA
+        MEDICA
+        ENFERMEIRA
+    }
+
+    class StatusAgendamento {
+        <<enumeration>>
+        MARCADO
+        EM_ANDAMENTO
+        ATENDIDO
+        FALTOU
+    }
+
+    class PeriodoTurno {
+        <<enumeration>>
+        MANHA
+        TARDE
+        NOITE
+    }
+
+    class TipoTelefone {
+        <<enumeration>>
+        CELULAR
+        FIXO
+        RECADO
+        TRABALHO
+    }
+
+    class Usuario {
+        -Long id
+        -String nomeCompleto
+        -String email
+        -String senhaHash
+        -RolePerfil perfil
+        -String registroProfissional
+        -String especialidade
+        -Boolean ativo
+        -LocalDateTime criadoEm
+        +autenticar(String senhaInformadaHash) boolean
+        +possuiPermissaoClinica() boolean
+    }
+
+    class Paciente {
+        -Long id
+        -String nomeCompleto
+        -String tratamento
+        -String genero
+        -LocalDate dataNascimento
+        -String estadoCivil
+        -String cutis
+        -String naturalidade
+        -String escolaridade
+        -String cpf
+        -String cns
+        -LocalDateTime dataCadastro
+        +calcularIdade() int
+        +adicionarTelefone(TelefoneContato telefone) void
+        +definirEndereco(Endereco novoEndereco) void
+        +definirDadosRecepcao(DadosRecepcao recepcao) void
+        +definirAnamnese(Anamnese novaAnamnese) void
+    }
+
+    class Endereco {
+        -Long id
+        -String cep
+        -String logradouro
+        -String numero
+        -String complemento
+        -String bairro
+        -String cidade
+        -String estado
+        -String codigoIbge
+        +formatarEnderecoCompleto() String
+    }
+
+    class TelefoneContato {
+        -Long id
+        -String numero
+        -TipoTelefone tipo
+        -Boolean hasWhatsapp
+        +obterNumeroSomenteDigitos() String
+    }
+
+    class DadosRecepcao {
+        -Long id
+        -LocalDate dum
+        -String planoSaude
+        -String observacoes
+        -LocalDateTime atualizadoEm
+        +isAtendimentoSus() boolean
+    }
+
+    class Anamnese {
+        -Long id
+        -String primeiraRelacao
+        -String primeiraMenstruacao
+        -String anoUltimaMenstruacao
+        -String anoUltimoParto
+        -Integer partosNormais
+        -Integer partosCesaria
+        -String curetagemAno
+        -String cauterizacaoAno
+        -Boolean dejaAborto
+        -Boolean tomaAnticoncepcional
+        -String cancerFamilia
+        -String mamas
+        -String sintomas
+        -LocalDateTime dataAtualizacao
+        +calcularTotalPartos() int
+        +possuiHistoricoOncologicoFamiliar() boolean
+    }
+
+    class Agendamento {
+        -Long id
+        -String protocolo
+        -LocalDate dataAtendimento
+        -LocalTime horario
+        -PeriodoTurno periodo
+        -Integer duracaoMinutos
+        -StatusAgendamento status
+        -Boolean encaixe
+        -Boolean notificadoWhatsapp
+        -LocalDateTime criadoEm
+        +adicionarProcedimento(Procedimento proc) void
+        +atualizarStatus(StatusAgendamento novoStatus) void
+        +gerarMensagemConfirmacaoWhatsApp() String
+    }
+
+    class Procedimento {
+        -Long id
+        -String codigo
+        -String nome
+        -String descricao
+        -Integer duracaoPadraoMinutos
+        -Boolean ativo
+    }
+
+    Paciente "1" -- "1" Endereco : reside em (1:1)
+    Paciente "1" -- "1..*" TelefoneContato : possui (1:N)
+    Paciente "1" -- "0..1" DadosRecepcao : triagem recepcao (1:1)
+    Paciente "1" -- "0..1" Anamnese : prontuario clinico (1:1)
+    Paciente "1" -- "0..*" Agendamento : agenda (1:N)
+    Usuario "1" -- "0..*" Agendamento : atende / responsavel (1:N)
+    Agendamento "0..*" -- "1..*" Procedimento : inclui exames/procedimentos (N:M)
+
+    Usuario ..> RolePerfil : usa
+    TelefoneContato ..> TipoTelefone : usa
+    Agendamento ..> StatusAgendamento : usa
+    Agendamento ..> PeriodoTurno : usa
