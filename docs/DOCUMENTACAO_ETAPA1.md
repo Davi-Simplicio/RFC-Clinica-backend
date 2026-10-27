@@ -4,17 +4,15 @@
 
 ## Identificação da Equipe
 
-> **Instrução:** Preencha os dados dos membros do grupo e o link do repositório antes da submissão final (máximo 5 integrantes, sendo 1 líder).
+| Papel | Nome Completo |
+| :--- | :--- |
+| **Líder da Equipe** | Vitor Augusto Rinkawetsky |
+| **Integrante 2** | Davi Simplicio |
+| **Integrante 3** | Gabriel Koehler da Silva |
+| **Integrante 4** | Jonatas Jackson Gonçalves |
+| **Integrante 5** | Wesley Diorrani Ferreira |
 
-| Papel | Nome Completo | Matrícula / RA | E-mail Acadêmico | GitHub |
-| :--- | :--- | :--- | :--- | :--- |
-| **Líder da Equipe** | *[Preencher Nome do Líder]* | *[Matrícula]* | *[email@instituicao.edu.br]* | `@usuario` |
-| **Integrante 2** | *[Preencher Nome]* | *[Matrícula]* | *[email@instituicao.edu.br]* | `@usuario` |
-| **Integrante 3** | *[Preencher Nome]* | *[Matrícula]* | *[email@instituicao.edu.br]* | `@usuario` |
-| **Integrante 4** | *[Preencher Nome]* | *[Matrícula]* | *[email@instituicao.edu.br]* | `@usuario` |
-| **Integrante 5** | *[Preencher Nome]* | *[Matrícula]* | *[email@instituicao.edu.br]* | `@usuario` |
-
-- **Repositório Git (Código-Fonte):** `https://github.com/[seu-usuario]/RFC-Clinica` *(atualizar com o link oficial do grupo)*
+- **Repositório Git (Código-Fonte):** <https://github.com/Davi-Simplicio/RFC-Clinica-backend>
 - **Data Limite de Entrega:** 26/10 às 23h59
 
 ---
